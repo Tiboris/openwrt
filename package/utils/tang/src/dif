@@ -1,0 +1,1815 @@
+diff -ru /home/tdudlak/BP/tang/aclocal.m4 ./aclocal.m4
+--- /home/tdudlak/BP/tang/aclocal.m4	2017-07-27 00:34:08.696885436 +0200
++++ ./aclocal.m4	2018-01-09 19:22:14.250299904 +0100
+@@ -20,9 +20,9 @@
+ If you have problems, you may need to regenerate the build system entirely.
+ To do so, use the procedure documented by the package, typically 'autoreconf'.])])
+ 
+-dnl pkg.m4 - Macros to locate and utilise pkg-config.   -*- Autoconf -*-
+-dnl serial 11 (pkg-config-0.29.1)
+-dnl
++# pkg.m4 - Macros to locate and utilise pkg-config.   -*- Autoconf -*-
++# serial 11 (pkg-config-0.29.1)
++
+ dnl Copyright © 2004 Scott James Remnant <scott@netsplit.com>.
+ dnl Copyright © 2012-2015 Dan Nicholson <dbn.lists@gmail.com>
+ dnl
+@@ -296,6 +296,74 @@
+ AS_VAR_IF([$1], [""], [$5], [$4])dnl
+ ])dnl PKG_CHECK_VAR
+ 
++dnl PKG_WITH_MODULES(VARIABLE-PREFIX, MODULES,
++dnl   [ACTION-IF-FOUND],[ACTION-IF-NOT-FOUND],
++dnl   [DESCRIPTION], [DEFAULT])
++dnl ------------------------------------------
++dnl
++dnl Prepare a "--with-" configure option using the lowercase
++dnl [VARIABLE-PREFIX] name, merging the behaviour of AC_ARG_WITH and
++dnl PKG_CHECK_MODULES in a single macro.
++AC_DEFUN([PKG_WITH_MODULES],
++[
++m4_pushdef([with_arg], m4_tolower([$1]))
++
++m4_pushdef([description],
++           [m4_default([$5], [build with ]with_arg[ support])])
++
++m4_pushdef([def_arg], [m4_default([$6], [auto])])
++m4_pushdef([def_action_if_found], [AS_TR_SH([with_]with_arg)=yes])
++m4_pushdef([def_action_if_not_found], [AS_TR_SH([with_]with_arg)=no])
++
++m4_case(def_arg,
++            [yes],[m4_pushdef([with_without], [--without-]with_arg)],
++            [m4_pushdef([with_without],[--with-]with_arg)])
++
++AC_ARG_WITH(with_arg,
++     AS_HELP_STRING(with_without, description[ @<:@default=]def_arg[@:>@]),,
++    [AS_TR_SH([with_]with_arg)=def_arg])
++
++AS_CASE([$AS_TR_SH([with_]with_arg)],
++            [yes],[PKG_CHECK_MODULES([$1],[$2],$3,$4)],
++            [auto],[PKG_CHECK_MODULES([$1],[$2],
++                                        [m4_n([def_action_if_found]) $3],
++                                        [m4_n([def_action_if_not_found]) $4])])
++
++m4_popdef([with_arg])
++m4_popdef([description])
++m4_popdef([def_arg])
++
++])dnl PKG_WITH_MODULES
++
++dnl PKG_HAVE_WITH_MODULES(VARIABLE-PREFIX, MODULES,
++dnl   [DESCRIPTION], [DEFAULT])
++dnl -----------------------------------------------
++dnl
++dnl Convenience macro to trigger AM_CONDITIONAL after PKG_WITH_MODULES
++dnl check._[VARIABLE-PREFIX] is exported as make variable.
++AC_DEFUN([PKG_HAVE_WITH_MODULES],
++[
++PKG_WITH_MODULES([$1],[$2],,,[$3],[$4])
++
++AM_CONDITIONAL([HAVE_][$1],
++               [test "$AS_TR_SH([with_]m4_tolower([$1]))" = "yes"])
++])dnl PKG_HAVE_WITH_MODULES
++
++dnl PKG_HAVE_DEFINE_WITH_MODULES(VARIABLE-PREFIX, MODULES,
++dnl   [DESCRIPTION], [DEFAULT])
++dnl ------------------------------------------------------
++dnl
++dnl Convenience macro to run AM_CONDITIONAL and AC_DEFINE after
++dnl PKG_WITH_MODULES check. HAVE_[VARIABLE-PREFIX] is exported as make
++dnl and preprocessor variable.
++AC_DEFUN([PKG_HAVE_DEFINE_WITH_MODULES],
++[
++PKG_HAVE_WITH_MODULES([$1],[$2],[$3],[$4])
++
++AS_IF([test "$AS_TR_SH([with_]m4_tolower([$1]))" = "yes"],
++        [AC_DEFINE([HAVE_][$1], 1, [Enable ]m4_tolower([$1])[ support])])
++])dnl PKG_HAVE_DEFINE_WITH_MODULES
++
+ # Copyright (C) 2002-2014 Free Software Foundation, Inc.
+ #
+ # This file is free software; the Free Software Foundation
+Only in /home/tdudlak/BP/tang: autom4te.cache
+diff -ru /home/tdudlak/BP/tang/config.guess ./config.guess
+--- /home/tdudlak/BP/tang/config.guess	2017-07-27 00:34:09.190888852 +0200
++++ ./config.guess	2018-01-09 19:22:14.250299904 +0100
+@@ -1,8 +1,8 @@
+ #! /bin/sh
+ # Attempt to guess a canonical system name.
+-#   Copyright 1992-2015 Free Software Foundation, Inc.
++#   Copyright 1992-2016 Free Software Foundation, Inc.
+ 
+-timestamp='2015-01-01'
++timestamp='2016-10-02'
+ 
+ # This file is free software; you can redistribute it and/or modify it
+ # under the terms of the GNU General Public License as published by
+@@ -27,7 +27,7 @@
+ # Originally written by Per Bothner; maintained since 2000 by Ben Elliston.
+ #
+ # You can get the latest version of this script from:
+-# http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD
++# http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess
+ #
+ # Please send patches to <config-patches@gnu.org>.
+ 
+@@ -50,7 +50,7 @@
+ GNU config.guess ($timestamp)
+ 
+ Originally written by Per Bothner.
+-Copyright 1992-2015 Free Software Foundation, Inc.
++Copyright 1992-2016 Free Software Foundation, Inc.
+ 
+ This is free software; see the source for copying conditions.  There is NO
+ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+@@ -168,19 +168,29 @@
+ 	# Note: NetBSD doesn't particularly care about the vendor
+ 	# portion of the name.  We always set it to "unknown".
+ 	sysctl="sysctl -n hw.machine_arch"
+-	UNAME_MACHINE_ARCH=`(/sbin/$sysctl 2>/dev/null || \
+-	    /usr/sbin/$sysctl 2>/dev/null || echo unknown)`
++	UNAME_MACHINE_ARCH=`(uname -p 2>/dev/null || \
++	    /sbin/$sysctl 2>/dev/null || \
++	    /usr/sbin/$sysctl 2>/dev/null || \
++	    echo unknown)`
+ 	case "${UNAME_MACHINE_ARCH}" in
+ 	    armeb) machine=armeb-unknown ;;
+ 	    arm*) machine=arm-unknown ;;
+ 	    sh3el) machine=shl-unknown ;;
+ 	    sh3eb) machine=sh-unknown ;;
+ 	    sh5el) machine=sh5le-unknown ;;
++	    earmv*)
++		arch=`echo ${UNAME_MACHINE_ARCH} | sed -e 's,^e\(armv[0-9]\).*$,\1,'`
++		endian=`echo ${UNAME_MACHINE_ARCH} | sed -ne 's,^.*\(eb\)$,\1,p'`
++		machine=${arch}${endian}-unknown
++		;;
+ 	    *) machine=${UNAME_MACHINE_ARCH}-unknown ;;
+ 	esac
+ 	# The Operating System including object format, if it has switched
+-	# to ELF recently, or will in the future.
++	# to ELF recently (or will in the future) and ABI.
+ 	case "${UNAME_MACHINE_ARCH}" in
++	    earm*)
++		os=netbsdelf
++		;;
+ 	    arm*|i386|m68k|ns32k|sh3*|sparc|vax)
+ 		eval $set_cc_for_build
+ 		if echo __ELF__ | $CC_FOR_BUILD -E - 2>/dev/null \
+@@ -197,6 +207,13 @@
+ 		os=netbsd
+ 		;;
+ 	esac
++	# Determine ABI tags.
++	case "${UNAME_MACHINE_ARCH}" in
++	    earm*)
++		expr='s/^earmv[0-9]/-eabi/;s/eb$//'
++		abi=`echo ${UNAME_MACHINE_ARCH} | sed -e "$expr"`
++		;;
++	esac
+ 	# The OS release
+ 	# Debian GNU/NetBSD machines have a different userland, and
+ 	# thus, need a distinct triplet. However, they do not need
+@@ -207,13 +224,13 @@
+ 		release='-gnu'
+ 		;;
+ 	    *)
+-		release=`echo ${UNAME_RELEASE}|sed -e 's/[-_].*/\./'`
++		release=`echo ${UNAME_RELEASE} | sed -e 's/[-_].*//' | cut -d. -f1,2`
+ 		;;
+ 	esac
+ 	# Since CPU_TYPE-MANUFACTURER-KERNEL-OPERATING_SYSTEM:
+ 	# contains redundant information, the shorter form:
+ 	# CPU_TYPE-MANUFACTURER-OPERATING_SYSTEM is used.
+-	echo "${machine}-${os}${release}"
++	echo "${machine}-${os}${release}${abi}"
+ 	exit ;;
+     *:Bitrig:*:*)
+ 	UNAME_MACHINE_ARCH=`arch | sed 's/Bitrig.//'`
+@@ -223,6 +240,10 @@
+ 	UNAME_MACHINE_ARCH=`arch | sed 's/OpenBSD.//'`
+ 	echo ${UNAME_MACHINE_ARCH}-unknown-openbsd${UNAME_RELEASE}
+ 	exit ;;
++    *:LibertyBSD:*:*)
++	UNAME_MACHINE_ARCH=`arch | sed 's/^.*BSD\.//'`
++	echo ${UNAME_MACHINE_ARCH}-unknown-libertybsd${UNAME_RELEASE}
++	exit ;;
+     *:ekkoBSD:*:*)
+ 	echo ${UNAME_MACHINE}-unknown-ekkobsd${UNAME_RELEASE}
+ 	exit ;;
+@@ -235,6 +256,9 @@
+     *:MirBSD:*:*)
+ 	echo ${UNAME_MACHINE}-unknown-mirbsd${UNAME_RELEASE}
+ 	exit ;;
++    *:Sortix:*:*)
++	echo ${UNAME_MACHINE}-unknown-sortix
++	exit ;;
+     alpha:OSF1:*:*)
+ 	case $UNAME_RELEASE in
+ 	*4.0)
+@@ -251,42 +275,42 @@
+ 	ALPHA_CPU_TYPE=`/usr/sbin/psrinfo -v | sed -n -e 's/^  The alpha \(.*\) processor.*$/\1/p' | head -n 1`
+ 	case "$ALPHA_CPU_TYPE" in
+ 	    "EV4 (21064)")
+-		UNAME_MACHINE="alpha" ;;
++		UNAME_MACHINE=alpha ;;
+ 	    "EV4.5 (21064)")
+-		UNAME_MACHINE="alpha" ;;
++		UNAME_MACHINE=alpha ;;
+ 	    "LCA4 (21066/21068)")
+-		UNAME_MACHINE="alpha" ;;
++		UNAME_MACHINE=alpha ;;
+ 	    "EV5 (21164)")
+-		UNAME_MACHINE="alphaev5" ;;
++		UNAME_MACHINE=alphaev5 ;;
+ 	    "EV5.6 (21164A)")
+-		UNAME_MACHINE="alphaev56" ;;
++		UNAME_MACHINE=alphaev56 ;;
+ 	    "EV5.6 (21164PC)")
+-		UNAME_MACHINE="alphapca56" ;;
++		UNAME_MACHINE=alphapca56 ;;
+ 	    "EV5.7 (21164PC)")
+-		UNAME_MACHINE="alphapca57" ;;
++		UNAME_MACHINE=alphapca57 ;;
+ 	    "EV6 (21264)")
+-		UNAME_MACHINE="alphaev6" ;;
++		UNAME_MACHINE=alphaev6 ;;
+ 	    "EV6.7 (21264A)")
+-		UNAME_MACHINE="alphaev67" ;;
++		UNAME_MACHINE=alphaev67 ;;
+ 	    "EV6.8CB (21264C)")
+-		UNAME_MACHINE="alphaev68" ;;
++		UNAME_MACHINE=alphaev68 ;;
+ 	    "EV6.8AL (21264B)")
+-		UNAME_MACHINE="alphaev68" ;;
++		UNAME_MACHINE=alphaev68 ;;
+ 	    "EV6.8CX (21264D)")
+-		UNAME_MACHINE="alphaev68" ;;
++		UNAME_MACHINE=alphaev68 ;;
+ 	    "EV6.9A (21264/EV69A)")
+-		UNAME_MACHINE="alphaev69" ;;
++		UNAME_MACHINE=alphaev69 ;;
+ 	    "EV7 (21364)")
+-		UNAME_MACHINE="alphaev7" ;;
++		UNAME_MACHINE=alphaev7 ;;
+ 	    "EV7.9 (21364A)")
+-		UNAME_MACHINE="alphaev79" ;;
++		UNAME_MACHINE=alphaev79 ;;
+ 	esac
+ 	# A Pn.n version is a patched version.
+ 	# A Vn.n version is a released version.
+ 	# A Tn.n version is a released field test version.
+ 	# A Xn.n version is an unreleased experimental baselevel.
+ 	# 1.2 uses "1.2" for uname -r.
+-	echo ${UNAME_MACHINE}-dec-osf`echo ${UNAME_RELEASE} | sed -e 's/^[PVTX]//' | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
++	echo ${UNAME_MACHINE}-dec-osf`echo ${UNAME_RELEASE} | sed -e 's/^[PVTX]//' | tr ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz`
+ 	# Reset EXIT trap before exiting to avoid spurious non-zero exit code.
+ 	exitcode=$?
+ 	trap '' 0
+@@ -359,16 +383,16 @@
+ 	exit ;;
+     i86pc:SunOS:5.*:* | i86xen:SunOS:5.*:*)
+ 	eval $set_cc_for_build
+-	SUN_ARCH="i386"
++	SUN_ARCH=i386
+ 	# If there is a compiler, see if it is configured for 64-bit objects.
+ 	# Note that the Sun cc does not turn __LP64__ into 1 like gcc does.
+ 	# This test works for both compilers.
+-	if [ "$CC_FOR_BUILD" != 'no_compiler_found' ]; then
++	if [ "$CC_FOR_BUILD" != no_compiler_found ]; then
+ 	    if (echo '#ifdef __amd64'; echo IS_64BIT_ARCH; echo '#endif') | \
+-		(CCOPTS= $CC_FOR_BUILD -E - 2>/dev/null) | \
++		(CCOPTS="" $CC_FOR_BUILD -E - 2>/dev/null) | \
+ 		grep IS_64BIT_ARCH >/dev/null
+ 	    then
+-		SUN_ARCH="x86_64"
++		SUN_ARCH=x86_64
+ 	    fi
+ 	fi
+ 	echo ${SUN_ARCH}-pc-solaris2`echo ${UNAME_RELEASE}|sed -e 's/[^.]*//'`
+@@ -393,7 +417,7 @@
+ 	exit ;;
+     sun*:*:4.2BSD:*)
+ 	UNAME_RELEASE=`(sed 1q /etc/motd | awk '{print substr($5,1,3)}') 2>/dev/null`
+-	test "x${UNAME_RELEASE}" = "x" && UNAME_RELEASE=3
++	test "x${UNAME_RELEASE}" = x && UNAME_RELEASE=3
+ 	case "`/bin/arch`" in
+ 	    sun3)
+ 		echo m68k-sun-sunos${UNAME_RELEASE}
+@@ -618,13 +642,13 @@
+ 		    sc_cpu_version=`/usr/bin/getconf SC_CPU_VERSION 2>/dev/null`
+ 		    sc_kernel_bits=`/usr/bin/getconf SC_KERNEL_BITS 2>/dev/null`
+ 		    case "${sc_cpu_version}" in
+-		      523) HP_ARCH="hppa1.0" ;; # CPU_PA_RISC1_0
+-		      528) HP_ARCH="hppa1.1" ;; # CPU_PA_RISC1_1
++		      523) HP_ARCH=hppa1.0 ;; # CPU_PA_RISC1_0
++		      528) HP_ARCH=hppa1.1 ;; # CPU_PA_RISC1_1
+ 		      532)                      # CPU_PA_RISC2_0
+ 			case "${sc_kernel_bits}" in
+-			  32) HP_ARCH="hppa2.0n" ;;
+-			  64) HP_ARCH="hppa2.0w" ;;
+-			  '') HP_ARCH="hppa2.0" ;;   # HP-UX 10.20
++			  32) HP_ARCH=hppa2.0n ;;
++			  64) HP_ARCH=hppa2.0w ;;
++			  '') HP_ARCH=hppa2.0 ;;   # HP-UX 10.20
+ 			esac ;;
+ 		    esac
+ 		fi
+@@ -663,11 +687,11 @@
+ 		    exit (0);
+ 		}
+ EOF
+-		    (CCOPTS= $CC_FOR_BUILD -o $dummy $dummy.c 2>/dev/null) && HP_ARCH=`$dummy`
++		    (CCOPTS="" $CC_FOR_BUILD -o $dummy $dummy.c 2>/dev/null) && HP_ARCH=`$dummy`
+ 		    test -z "$HP_ARCH" && HP_ARCH=hppa
+ 		fi ;;
+ 	esac
+-	if [ ${HP_ARCH} = "hppa2.0w" ]
++	if [ ${HP_ARCH} = hppa2.0w ]
+ 	then
+ 	    eval $set_cc_for_build
+ 
+@@ -680,12 +704,12 @@
+ 	    # $ CC_FOR_BUILD="cc +DA2.0w" ./config.guess
+ 	    # => hppa64-hp-hpux11.23
+ 
+-	    if echo __LP64__ | (CCOPTS= $CC_FOR_BUILD -E - 2>/dev/null) |
++	    if echo __LP64__ | (CCOPTS="" $CC_FOR_BUILD -E - 2>/dev/null) |
+ 		grep -q __LP64__
+ 	    then
+-		HP_ARCH="hppa2.0w"
++		HP_ARCH=hppa2.0w
+ 	    else
+-		HP_ARCH="hppa64"
++		HP_ARCH=hppa64
+ 	    fi
+ 	fi
+ 	echo ${HP_ARCH}-hp-hpux${HPUX_REV}
+@@ -790,14 +814,14 @@
+ 	echo craynv-cray-unicosmp${UNAME_RELEASE} | sed -e 's/\.[^.]*$/.X/'
+ 	exit ;;
+     F30[01]:UNIX_System_V:*:* | F700:UNIX_System_V:*:*)
+-	FUJITSU_PROC=`uname -m | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
+-	FUJITSU_SYS=`uname -p | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | sed -e 's/\///'`
++	FUJITSU_PROC=`uname -m | tr ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz`
++	FUJITSU_SYS=`uname -p | tr ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz | sed -e 's/\///'`
+ 	FUJITSU_REL=`echo ${UNAME_RELEASE} | sed -e 's/ /_/'`
+ 	echo "${FUJITSU_PROC}-fujitsu-${FUJITSU_SYS}${FUJITSU_REL}"
+ 	exit ;;
+     5000:UNIX_System_V:4.*:*)
+-	FUJITSU_SYS=`uname -p | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | sed -e 's/\///'`
+-	FUJITSU_REL=`echo ${UNAME_RELEASE} | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | sed -e 's/ /_/'`
++	FUJITSU_SYS=`uname -p | tr ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz | sed -e 's/\///'`
++	FUJITSU_REL=`echo ${UNAME_RELEASE} | tr ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz | sed -e 's/ /_/'`
+ 	echo "sparc-fujitsu-${FUJITSU_SYS}${FUJITSU_REL}"
+ 	exit ;;
+     i*86:BSD/386:*:* | i*86:BSD/OS:*:* | *:Ascend\ Embedded/OS:*:*)
+@@ -879,7 +903,7 @@
+ 	exit ;;
+     *:GNU/*:*:*)
+ 	# other systems with GNU libc and userland
+-	echo ${UNAME_MACHINE}-unknown-`echo ${UNAME_SYSTEM} | sed 's,^[^/]*/,,' | tr '[A-Z]' '[a-z]'``echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`-${LIBC}
++	echo ${UNAME_MACHINE}-unknown-`echo ${UNAME_SYSTEM} | sed 's,^[^/]*/,,' | tr "[:upper:]" "[:lower:]"``echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`-${LIBC}
+ 	exit ;;
+     i*86:Minix:*:*)
+ 	echo ${UNAME_MACHINE}-pc-minix
+@@ -902,7 +926,7 @@
+ 	  EV68*) UNAME_MACHINE=alphaev68 ;;
+ 	esac
+ 	objdump --private-headers /bin/sh | grep -q ld.so.1
+-	if test "$?" = 0 ; then LIBC="gnulibc1" ; fi
++	if test "$?" = 0 ; then LIBC=gnulibc1 ; fi
+ 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
+ 	exit ;;
+     arc:Linux:*:* | arceb:Linux:*:*)
+@@ -933,6 +957,9 @@
+     crisv32:Linux:*:*)
+ 	echo ${UNAME_MACHINE}-axis-linux-${LIBC}
+ 	exit ;;
++    e2k:Linux:*:*)
++	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
++	exit ;;
+     frv:Linux:*:*)
+ 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
+ 	exit ;;
+@@ -945,6 +972,9 @@
+     ia64:Linux:*:*)
+ 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
+ 	exit ;;
++    k1om:Linux:*:*)
++	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
++	exit ;;
+     m32r*:Linux:*:*)
+ 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
+ 	exit ;;
+@@ -970,6 +1000,9 @@
+ 	eval `$CC_FOR_BUILD -E $dummy.c 2>/dev/null | grep '^CPU'`
+ 	test x"${CPU}" != x && { echo "${CPU}-unknown-linux-${LIBC}"; exit; }
+ 	;;
++    mips64el:Linux:*:*)
++	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
++	exit ;;
+     openrisc*:Linux:*:*)
+ 	echo or1k-unknown-linux-${LIBC}
+ 	exit ;;
+@@ -1002,6 +1035,9 @@
+     ppcle:Linux:*:*)
+ 	echo powerpcle-unknown-linux-${LIBC}
+ 	exit ;;
++    riscv32:Linux:*:* | riscv64:Linux:*:*)
++	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
++	exit ;;
+     s390:Linux:*:* | s390x:Linux:*:*)
+ 	echo ${UNAME_MACHINE}-ibm-linux-${LIBC}
+ 	exit ;;
+@@ -1021,7 +1057,7 @@
+ 	echo ${UNAME_MACHINE}-dec-linux-${LIBC}
+ 	exit ;;
+     x86_64:Linux:*:*)
+-	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
++	echo ${UNAME_MACHINE}-pc-linux-${LIBC}
+ 	exit ;;
+     xtensa*:Linux:*:*)
+ 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
+@@ -1100,7 +1136,7 @@
+ 	# uname -m prints for DJGPP always 'pc', but it prints nothing about
+ 	# the processor, so we play safe by assuming i586.
+ 	# Note: whatever this is, it MUST be the same as what config.sub
+-	# prints for the "djgpp" host, or else GDB configury will decide that
++	# prints for the "djgpp" host, or else GDB configure will decide that
+ 	# this is a cross-build.
+ 	echo i586-pc-msdosdjgpp
+ 	exit ;;
+@@ -1249,6 +1285,9 @@
+     SX-8R:SUPER-UX:*:*)
+ 	echo sx8r-nec-superux${UNAME_RELEASE}
+ 	exit ;;
++    SX-ACE:SUPER-UX:*:*)
++	echo sxace-nec-superux${UNAME_RELEASE}
++	exit ;;
+     Power*:Rhapsody:*:*)
+ 	echo powerpc-apple-rhapsody${UNAME_RELEASE}
+ 	exit ;;
+@@ -1262,9 +1301,9 @@
+ 	    UNAME_PROCESSOR=powerpc
+ 	fi
+ 	if test `echo "$UNAME_RELEASE" | sed -e 's/\..*//'` -le 10 ; then
+-	    if [ "$CC_FOR_BUILD" != 'no_compiler_found' ]; then
++	    if [ "$CC_FOR_BUILD" != no_compiler_found ]; then
+ 		if (echo '#ifdef __LP64__'; echo IS_64BIT_ARCH; echo '#endif') | \
+-		    (CCOPTS= $CC_FOR_BUILD -E - 2>/dev/null) | \
++		    (CCOPTS="" $CC_FOR_BUILD -E - 2>/dev/null) | \
+ 		    grep IS_64BIT_ARCH >/dev/null
+ 		then
+ 		    case $UNAME_PROCESSOR in
+@@ -1286,7 +1325,7 @@
+ 	exit ;;
+     *:procnto*:*:* | *:QNX:[0123456789]*:*)
+ 	UNAME_PROCESSOR=`uname -p`
+-	if test "$UNAME_PROCESSOR" = "x86"; then
++	if test "$UNAME_PROCESSOR" = x86; then
+ 		UNAME_PROCESSOR=i386
+ 		UNAME_MACHINE=pc
+ 	fi
+@@ -1317,7 +1356,7 @@
+ 	# "uname -m" is not consistent, so use $cputype instead. 386
+ 	# is converted to i386 for consistency with other x86
+ 	# operating systems.
+-	if test "$cputype" = "386"; then
++	if test "$cputype" = 386; then
+ 	    UNAME_MACHINE=i386
+ 	else
+ 	    UNAME_MACHINE="$cputype"
+@@ -1359,7 +1398,7 @@
+ 	echo i386-pc-xenix
+ 	exit ;;
+     i*86:skyos:*:*)
+-	echo ${UNAME_MACHINE}-pc-skyos`echo ${UNAME_RELEASE}` | sed -e 's/ .*$//'
++	echo ${UNAME_MACHINE}-pc-skyos`echo ${UNAME_RELEASE} | sed -e 's/ .*$//'`
+ 	exit ;;
+     i*86:rdos:*:*)
+ 	echo ${UNAME_MACHINE}-pc-rdos
+@@ -1370,23 +1409,25 @@
+     x86_64:VMkernel:*:*)
+ 	echo ${UNAME_MACHINE}-unknown-esx
+ 	exit ;;
++    amd64:Isilon\ OneFS:*:*)
++	echo x86_64-unknown-onefs
++	exit ;;
+ esac
+ 
+ cat >&2 <<EOF
+ $0: unable to guess system type
+ 
+-This script, last modified $timestamp, has failed to recognize
+-the operating system you are using. It is advised that you
+-download the most up to date version of the config scripts from
++This script (version $timestamp), has failed to recognize the
++operating system you are using. If your script is old, overwrite
++config.guess and config.sub with the latest versions from:
+ 
+-  http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD
++  http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess
+ and
+-  http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD
++  http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub
+ 
+-If the version you run ($0) is already up to date, please
+-send the following data and any information you think might be
+-pertinent to <config-patches@gnu.org> in order to provide the needed
+-information to handle your system.
++If $0 has already been updated, send the following data and any
++information you think might be pertinent to config-patches@gnu.org to
++provide the necessary information to handle your system.
+ 
+ config.guess timestamp = $timestamp
+ 
+Only in /home/tdudlak/BP/tang: config.log
+Only in /home/tdudlak/BP/tang: config.status
+diff -ru /home/tdudlak/BP/tang/config.sub ./config.sub
+--- /home/tdudlak/BP/tang/config.sub	2017-07-27 00:34:09.191888859 +0200
++++ ./config.sub	2018-01-09 19:22:14.250299904 +0100
+@@ -1,8 +1,8 @@
+ #! /bin/sh
+ # Configuration validation subroutine script.
+-#   Copyright 1992-2015 Free Software Foundation, Inc.
++#   Copyright 1992-2016 Free Software Foundation, Inc.
+ 
+-timestamp='2015-01-01'
++timestamp='2016-09-05'
+ 
+ # This file is free software; you can redistribute it and/or modify it
+ # under the terms of the GNU General Public License as published by
+@@ -33,7 +33,7 @@
+ # Otherwise, we print the canonical config type on stdout and succeed.
+ 
+ # You can get the latest version of this script from:
+-# http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD
++# http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub
+ 
+ # This file is supposed to be the same for all GNU packages
+ # and recognize all the CPU types, system types and aliases
+@@ -53,8 +53,7 @@
+ me=`echo "$0" | sed -e 's,.*/,,'`
+ 
+ usage="\
+-Usage: $0 [OPTION] CPU-MFR-OPSYS
+-       $0 [OPTION] ALIAS
++Usage: $0 [OPTION] CPU-MFR-OPSYS or ALIAS
+ 
+ Canonicalize a configuration name.
+ 
+@@ -68,7 +67,7 @@
+ version="\
+ GNU config.sub ($timestamp)
+ 
+-Copyright 1992-2015 Free Software Foundation, Inc.
++Copyright 1992-2016 Free Software Foundation, Inc.
+ 
+ This is free software; see the source for copying conditions.  There is NO
+ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+@@ -117,8 +116,8 @@
+ case $maybe_os in
+   nto-qnx* | linux-gnu* | linux-android* | linux-dietlibc | linux-newlib* | \
+   linux-musl* | linux-uclibc* | uclinux-uclibc* | uclinux-gnu* | kfreebsd*-gnu* | \
+-  knetbsd*-gnu* | netbsd*-gnu* | \
+-  kopensolaris*-gnu* | \
++  knetbsd*-gnu* | netbsd*-gnu* | netbsd*-eabi* | \
++  kopensolaris*-gnu* | cloudabi*-eabi* | \
+   storm-chaos* | os2-emx* | rtmk-nova*)
+     os=-$maybe_os
+     basic_machine=`echo $1 | sed 's/^\(.*\)-\([^-]*-[^-]*\)$/\1/'`
+@@ -255,11 +254,12 @@
+ 	| arc | arceb \
+ 	| arm | arm[bl]e | arme[lb] | armv[2-8] | armv[3-8][lb] | armv7[arm] \
+ 	| avr | avr32 \
++	| ba \
+ 	| be32 | be64 \
+ 	| bfin \
+ 	| c4x | c8051 | clipper \
+ 	| d10v | d30v | dlx | dsp16xx \
+-	| epiphany \
++	| e2k | epiphany \
+ 	| fido | fr30 | frv | ft32 \
+ 	| h8300 | h8500 | hppa | hppa1.[01] | hppa2.0 | hppa2.0[nw] | hppa64 \
+ 	| hexagon \
+@@ -305,7 +305,7 @@
+ 	| riscv32 | riscv64 \
+ 	| rl78 | rx \
+ 	| score \
+-	| sh | sh[1234] | sh[24]a | sh[24]aeb | sh[23]e | sh[34]eb | sheb | shbe | shle | sh[1234]le | sh3ele \
++	| sh | sh[1234] | sh[24]a | sh[24]aeb | sh[23]e | sh[234]eb | sheb | shbe | shle | sh[1234]le | sh3ele \
+ 	| sh64 | sh64le \
+ 	| sparc | sparc64 | sparc64b | sparc64v | sparc86x | sparclet | sparclite \
+ 	| sparcv8 | sparcv9 | sparcv9b | sparcv9v \
+@@ -376,12 +376,13 @@
+ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* | arceb-* \
+ 	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* \
+ 	| avr-* | avr32-* \
++	| ba-* \
+ 	| be32-* | be64-* \
+ 	| bfin-* | bs2000-* \
+ 	| c[123]* | c30-* | [cjt]90-* | c4x-* \
+ 	| c8051-* | clipper-* | craynv-* | cydra-* \
+ 	| d10v-* | d30v-* | dlx-* \
+-	| elxsi-* \
++	| e2k-* | elxsi-* \
+ 	| f30[01]-* | f700-* | fido-* | fr30-* | frv-* | fx80-* \
+ 	| h8300-* | h8500-* \
+ 	| hppa-* | hppa1.[01]-* | hppa2.0-* | hppa2.0[nw]-* | hppa64-* \
+@@ -428,12 +429,13 @@
+ 	| pdp10-* | pdp11-* | pj-* | pjl-* | pn-* | power-* \
+ 	| powerpc-* | powerpc64-* | powerpc64le-* | powerpcle-* \
+ 	| pyramid-* \
++	| riscv32-* | riscv64-* \
+ 	| rl78-* | romp-* | rs6000-* | rx-* \
+ 	| sh-* | sh[1234]-* | sh[24]a-* | sh[24]aeb-* | sh[23]e-* | sh[34]eb-* | sheb-* | shbe-* \
+ 	| shle-* | sh[1234]le-* | sh3ele-* | sh64-* | sh64le-* \
+ 	| sparc-* | sparc64-* | sparc64b-* | sparc64v-* | sparc86x-* | sparclet-* \
+ 	| sparclite-* \
+-	| sparcv8-* | sparcv9-* | sparcv9b-* | sparcv9v-* | sv1-* | sx?-* \
++	| sparcv8-* | sparcv9-* | sparcv9b-* | sparcv9v-* | sv1-* | sx*-* \
+ 	| tahoe-* \
+ 	| tic30-* | tic4x-* | tic54x-* | tic55x-* | tic6x-* | tic80-* \
+ 	| tile*-* \
+@@ -518,6 +520,9 @@
+ 		basic_machine=i386-pc
+ 		os=-aros
+ 		;;
++	asmjs)
++		basic_machine=asmjs-unknown
++		;;
+ 	aux)
+ 		basic_machine=m68k-apple
+ 		os=-aux
+@@ -638,6 +643,14 @@
+ 		basic_machine=m68k-bull
+ 		os=-sysv3
+ 		;;
++	e500v[12])
++		basic_machine=powerpc-unknown
++		os=$os"spe"
++		;;
++	e500v[12]-*)
++		basic_machine=powerpc-`echo $basic_machine | sed 's/^[^-]*-//'`
++		os=$os"spe"
++		;;
+ 	ebmon29k)
+ 		basic_machine=a29k-amd
+ 		os=-ebmon
+@@ -1017,7 +1030,7 @@
+ 	ppc-* | ppcbe-*)
+ 		basic_machine=powerpc-`echo $basic_machine | sed 's/^[^-]*-//'`
+ 		;;
+-	ppcle | powerpclittle | ppc-le | powerpc-little)
++	ppcle | powerpclittle)
+ 		basic_machine=powerpcle-unknown
+ 		;;
+ 	ppcle-* | powerpclittle-*)
+@@ -1027,7 +1040,7 @@
+ 		;;
+ 	ppc64-* | ppc64p7-*) basic_machine=powerpc64-`echo $basic_machine | sed 's/^[^-]*-//'`
+ 		;;
+-	ppc64le | powerpc64little | ppc64-le | powerpc64-little)
++	ppc64le | powerpc64little)
+ 		basic_machine=powerpc64le-unknown
+ 		;;
+ 	ppc64le-* | powerpc64little-*)
+@@ -1373,18 +1386,18 @@
+ 	      | -hpux* | -unos* | -osf* | -luna* | -dgux* | -auroraux* | -solaris* \
+ 	      | -sym* | -kopensolaris* | -plan9* \
+ 	      | -amigaos* | -amigados* | -msdos* | -newsos* | -unicos* | -aof* \
+-	      | -aos* | -aros* \
++	      | -aos* | -aros* | -cloudabi* | -sortix* \
+ 	      | -nindy* | -vxsim* | -vxworks* | -ebmon* | -hms* | -mvs* \
+ 	      | -clix* | -riscos* | -uniplus* | -iris* | -rtu* | -xenix* \
+ 	      | -hiux* | -386bsd* | -knetbsd* | -mirbsd* | -netbsd* \
+-	      | -bitrig* | -openbsd* | -solidbsd* \
++	      | -bitrig* | -openbsd* | -solidbsd* | -libertybsd* \
+ 	      | -ekkobsd* | -kfreebsd* | -freebsd* | -riscix* | -lynxos* \
+ 	      | -bosx* | -nextstep* | -cxux* | -aout* | -elf* | -oabi* \
+ 	      | -ptx* | -coff* | -ecoff* | -winnt* | -domain* | -vsta* \
+ 	      | -udi* | -eabi* | -lites* | -ieee* | -go32* | -aux* \
+ 	      | -chorusos* | -chorusrdb* | -cegcc* \
+ 	      | -cygwin* | -msys* | -pe* | -psos* | -moss* | -proelf* | -rtems* \
+-	      | -mingw32* | -mingw64* | -linux-gnu* | -linux-android* \
++	      | -midipix* | -mingw32* | -mingw64* | -linux-gnu* | -linux-android* \
+ 	      | -linux-newlib* | -linux-musl* | -linux-uclibc* \
+ 	      | -uxpv* | -beos* | -mpeix* | -udk* | -moxiebox* \
+ 	      | -interix* | -uwin* | -mks* | -rhapsody* | -darwin* | -opened* \
+@@ -1393,7 +1406,8 @@
+ 	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* | -tirtos*)
++	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* \
++	      | -onefs* | -tirtos* | -phoenix*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)
+@@ -1525,6 +1539,8 @@
+ 		;;
+ 	-nacl*)
+ 		;;
++	-ios)
++		;;
+ 	-none)
+ 		;;
+ 	*)
+diff -ru /home/tdudlak/BP/tang/configure ./configure
+--- /home/tdudlak/BP/tang/configure	2017-07-27 00:34:08.987887448 +0200
++++ ./configure	2018-01-09 19:22:14.251299913 +0100
+@@ -1,6 +1,6 @@
+ #! /bin/sh
+ # Guess values for system-dependent variables and create Makefiles.
+-# Generated by GNU Autoconf 2.69 for tang 4.
++# Generated by GNU Autoconf 2.69 for tang 6.
+ #
+ #
+ # Copyright (C) 1992-1996, 1998-2012 Free Software Foundation, Inc.
+@@ -577,8 +577,8 @@
+ # Identity of this package.
+ PACKAGE_NAME='tang'
+ PACKAGE_TARNAME='tang'
+-PACKAGE_VERSION='4'
+-PACKAGE_STRING='tang 4'
++PACKAGE_VERSION='6'
++PACKAGE_STRING='tang 6'
+ PACKAGE_BUGREPORT=''
+ PACKAGE_URL=''
+ 
+@@ -587,10 +587,12 @@
+ LTLIBOBJS
+ LIBOBJS
+ TANG_CFLAGS
+-jose_openssl_LIBS
+-jose_openssl_CFLAGS
+-jose_zlib_LIBS
+-jose_zlib_CFLAGS
++SD_ACTIVATE
++systemdsystemunitdir
++systemd_LIBS
++systemd_CFLAGS
++jose_LIBS
++jose_CFLAGS
+ http_parser_LIBS
+ dl_LIBS
+ PKG_CONFIG_LIBDIR
+@@ -696,6 +698,7 @@
+ enable_option_checking
+ enable_dependency_tracking
+ enable_silent_rules
++with_systemdsystemunitdir
+ '
+       ac_precious_vars='build_alias
+ host_alias
+@@ -708,10 +711,10 @@
+ PKG_CONFIG
+ PKG_CONFIG_PATH
+ PKG_CONFIG_LIBDIR
+-jose_zlib_CFLAGS
+-jose_zlib_LIBS
+-jose_openssl_CFLAGS
+-jose_openssl_LIBS'
++jose_CFLAGS
++jose_LIBS
++systemd_CFLAGS
++systemd_LIBS'
+ 
+ 
+ # Initialize some variables set by options.
+@@ -1252,7 +1255,7 @@
+   # Omit some internal or obsolete options to make the list less imposing.
+   # This message is too long to be a string in the A/UX 3.1 sh.
+   cat <<_ACEOF
+-\`configure' configures tang 4 to adapt to many kinds of systems.
++\`configure' configures tang 6 to adapt to many kinds of systems.
+ 
+ Usage: $0 [OPTION]... [VAR=VALUE]...
+ 
+@@ -1323,7 +1326,7 @@
+ 
+ if test -n "$ac_init_help"; then
+   case $ac_init_help in
+-     short | recursive ) echo "Configuration of tang 4:";;
++     short | recursive ) echo "Configuration of tang 6:";;
+    esac
+   cat <<\_ACEOF
+ 
+@@ -1338,6 +1341,12 @@
+   --enable-silent-rules   less verbose build output (undo: "make V=1")
+   --disable-silent-rules  verbose build output (undo: "make V=0")
+ 
++Optional Packages:
++  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
++  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
++  --with-systemdsystemunitdir=DIR
++                          Directory for systemd service files
++
+ Some influential environment variables:
+   CC          C compiler command
+   CFLAGS      C compiler flags
+@@ -1351,14 +1360,12 @@
+               directories to add to pkg-config's search path
+   PKG_CONFIG_LIBDIR
+               path overriding pkg-config's built-in search path
+-  jose_zlib_CFLAGS
+-              C compiler flags for jose_zlib, overriding pkg-config
+-  jose_zlib_LIBS
+-              linker flags for jose_zlib, overriding pkg-config
+-  jose_openssl_CFLAGS
+-              C compiler flags for jose_openssl, overriding pkg-config
+-  jose_openssl_LIBS
+-              linker flags for jose_openssl, overriding pkg-config
++  jose_CFLAGS C compiler flags for jose, overriding pkg-config
++  jose_LIBS   linker flags for jose, overriding pkg-config
++  systemd_CFLAGS
++              C compiler flags for systemd, overriding pkg-config
++  systemd_LIBS
++              linker flags for systemd, overriding pkg-config
+ 
+ Use these variables to override the choices made by `configure' or to help
+ it to find libraries and programs with nonstandard names/locations.
+@@ -1426,7 +1433,7 @@
+ test -n "$ac_init_help" && exit $ac_status
+ if $ac_init_version; then
+   cat <<\_ACEOF
+-tang configure 4
++tang configure 6
+ generated by GNU Autoconf 2.69
+ 
+ Copyright (C) 2012 Free Software Foundation, Inc.
+@@ -1558,7 +1565,7 @@
+ This file contains any messages produced by compilers while
+ running configure, to aid debugging if configure makes a mistake.
+ 
+-It was created by tang $as_me 4, which was
++It was created by tang $as_me 6, which was
+ generated by GNU Autoconf 2.69.  Invocation command line was
+ 
+   $ $0 $@
+@@ -3690,7 +3697,7 @@
+ 
+ # Define the identity of the package.
+  PACKAGE='tang'
+- VERSION='4'
++ VERSION='6'
+ 
+ 
+ cat >>confdefs.h <<_ACEOF
+@@ -4221,19 +4228,19 @@
+ 
+ 
+ pkg_failed=no
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for jose_zlib" >&5
+-$as_echo_n "checking for jose_zlib... " >&6; }
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for jose" >&5
++$as_echo_n "checking for jose... " >&6; }
+ 
+-if test -n "$jose_zlib_CFLAGS"; then
+-    pkg_cv_jose_zlib_CFLAGS="$jose_zlib_CFLAGS"
++if test -n "$jose_CFLAGS"; then
++    pkg_cv_jose_CFLAGS="$jose_CFLAGS"
+  elif test -n "$PKG_CONFIG"; then
+     if test -n "$PKG_CONFIG" && \
+-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"jose-zlib >= 5\""; } >&5
+-  ($PKG_CONFIG --exists --print-errors "jose-zlib >= 5") 2>&5
++    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"jose >= 8\""; } >&5
++  ($PKG_CONFIG --exists --print-errors "jose >= 8") 2>&5
+   ac_status=$?
+   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+   test $ac_status = 0; }; then
+-  pkg_cv_jose_zlib_CFLAGS=`$PKG_CONFIG --cflags "jose-zlib >= 5" 2>/dev/null`
++  pkg_cv_jose_CFLAGS=`$PKG_CONFIG --cflags "jose >= 8" 2>/dev/null`
+ 		      test "x$?" != "x0" && pkg_failed=yes
+ else
+   pkg_failed=yes
+@@ -4241,16 +4248,16 @@
+  else
+     pkg_failed=untried
+ fi
+-if test -n "$jose_zlib_LIBS"; then
+-    pkg_cv_jose_zlib_LIBS="$jose_zlib_LIBS"
++if test -n "$jose_LIBS"; then
++    pkg_cv_jose_LIBS="$jose_LIBS"
+  elif test -n "$PKG_CONFIG"; then
+     if test -n "$PKG_CONFIG" && \
+-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"jose-zlib >= 5\""; } >&5
+-  ($PKG_CONFIG --exists --print-errors "jose-zlib >= 5") 2>&5
++    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"jose >= 8\""; } >&5
++  ($PKG_CONFIG --exists --print-errors "jose >= 8") 2>&5
+   ac_status=$?
+   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+   test $ac_status = 0; }; then
+-  pkg_cv_jose_zlib_LIBS=`$PKG_CONFIG --libs "jose-zlib >= 5" 2>/dev/null`
++  pkg_cv_jose_LIBS=`$PKG_CONFIG --libs "jose >= 8" 2>/dev/null`
+ 		      test "x$?" != "x0" && pkg_failed=yes
+ else
+   pkg_failed=yes
+@@ -4271,22 +4278,22 @@
+         _pkg_short_errors_supported=no
+ fi
+         if test $_pkg_short_errors_supported = yes; then
+-	        jose_zlib_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "jose-zlib >= 5" 2>&1`
++	        jose_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "jose >= 8" 2>&1`
+         else
+-	        jose_zlib_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "jose-zlib >= 5" 2>&1`
++	        jose_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "jose >= 8" 2>&1`
+         fi
+ 	# Put the nasty error message in config.log where it belongs
+-	echo "$jose_zlib_PKG_ERRORS" >&5
++	echo "$jose_PKG_ERRORS" >&5
+ 
+-	as_fn_error $? "Package requirements (jose-zlib >= 5) were not met:
++	as_fn_error $? "Package requirements (jose >= 8) were not met:
+ 
+-$jose_zlib_PKG_ERRORS
++$jose_PKG_ERRORS
+ 
+ Consider adjusting the PKG_CONFIG_PATH environment variable if you
+ installed software in a non-standard prefix.
+ 
+-Alternatively, you may set the environment variables jose_zlib_CFLAGS
+-and jose_zlib_LIBS to avoid the need to call pkg-config.
++Alternatively, you may set the environment variables jose_CFLAGS
++and jose_LIBS to avoid the need to call pkg-config.
+ See the pkg-config man page for more details." "$LINENO" 5
+ elif test $pkg_failed = untried; then
+      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+@@ -4297,34 +4304,34 @@
+ is in your PATH or set the PKG_CONFIG environment variable to the full
+ path to pkg-config.
+ 
+-Alternatively, you may set the environment variables jose_zlib_CFLAGS
+-and jose_zlib_LIBS to avoid the need to call pkg-config.
++Alternatively, you may set the environment variables jose_CFLAGS
++and jose_LIBS to avoid the need to call pkg-config.
+ See the pkg-config man page for more details.
+ 
+ To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+ See \`config.log' for more details" "$LINENO" 5; }
+ else
+-	jose_zlib_CFLAGS=$pkg_cv_jose_zlib_CFLAGS
+-	jose_zlib_LIBS=$pkg_cv_jose_zlib_LIBS
++	jose_CFLAGS=$pkg_cv_jose_CFLAGS
++	jose_LIBS=$pkg_cv_jose_LIBS
+         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ $as_echo "yes" >&6; }
+ 
+ fi
+ 
+ pkg_failed=no
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for jose_openssl" >&5
+-$as_echo_n "checking for jose_openssl... " >&6; }
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for systemd" >&5
++$as_echo_n "checking for systemd... " >&6; }
+ 
+-if test -n "$jose_openssl_CFLAGS"; then
+-    pkg_cv_jose_openssl_CFLAGS="$jose_openssl_CFLAGS"
++if test -n "$systemd_CFLAGS"; then
++    pkg_cv_systemd_CFLAGS="$systemd_CFLAGS"
+  elif test -n "$PKG_CONFIG"; then
+     if test -n "$PKG_CONFIG" && \
+-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"jose-openssl >= 5\""; } >&5
+-  ($PKG_CONFIG --exists --print-errors "jose-openssl >= 5") 2>&5
++    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"systemd\""; } >&5
++  ($PKG_CONFIG --exists --print-errors "systemd") 2>&5
+   ac_status=$?
+   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+   test $ac_status = 0; }; then
+-  pkg_cv_jose_openssl_CFLAGS=`$PKG_CONFIG --cflags "jose-openssl >= 5" 2>/dev/null`
++  pkg_cv_systemd_CFLAGS=`$PKG_CONFIG --cflags "systemd" 2>/dev/null`
+ 		      test "x$?" != "x0" && pkg_failed=yes
+ else
+   pkg_failed=yes
+@@ -4332,16 +4339,16 @@
+  else
+     pkg_failed=untried
+ fi
+-if test -n "$jose_openssl_LIBS"; then
+-    pkg_cv_jose_openssl_LIBS="$jose_openssl_LIBS"
++if test -n "$systemd_LIBS"; then
++    pkg_cv_systemd_LIBS="$systemd_LIBS"
+  elif test -n "$PKG_CONFIG"; then
+     if test -n "$PKG_CONFIG" && \
+-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"jose-openssl >= 5\""; } >&5
+-  ($PKG_CONFIG --exists --print-errors "jose-openssl >= 5") 2>&5
++    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"systemd\""; } >&5
++  ($PKG_CONFIG --exists --print-errors "systemd") 2>&5
+   ac_status=$?
+   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+   test $ac_status = 0; }; then
+-  pkg_cv_jose_openssl_LIBS=`$PKG_CONFIG --libs "jose-openssl >= 5" 2>/dev/null`
++  pkg_cv_systemd_LIBS=`$PKG_CONFIG --libs "systemd" 2>/dev/null`
+ 		      test "x$?" != "x0" && pkg_failed=yes
+ else
+   pkg_failed=yes
+@@ -4362,22 +4369,22 @@
+         _pkg_short_errors_supported=no
+ fi
+         if test $_pkg_short_errors_supported = yes; then
+-	        jose_openssl_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "jose-openssl >= 5" 2>&1`
++	        systemd_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "systemd" 2>&1`
+         else
+-	        jose_openssl_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "jose-openssl >= 5" 2>&1`
++	        systemd_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "systemd" 2>&1`
+         fi
+ 	# Put the nasty error message in config.log where it belongs
+-	echo "$jose_openssl_PKG_ERRORS" >&5
++	echo "$systemd_PKG_ERRORS" >&5
+ 
+-	as_fn_error $? "Package requirements (jose-openssl >= 5) were not met:
++	as_fn_error $? "Package requirements (systemd) were not met:
+ 
+-$jose_openssl_PKG_ERRORS
++$systemd_PKG_ERRORS
+ 
+ Consider adjusting the PKG_CONFIG_PATH environment variable if you
+ installed software in a non-standard prefix.
+ 
+-Alternatively, you may set the environment variables jose_openssl_CFLAGS
+-and jose_openssl_LIBS to avoid the need to call pkg-config.
++Alternatively, you may set the environment variables systemd_CFLAGS
++and systemd_LIBS to avoid the need to call pkg-config.
+ See the pkg-config man page for more details." "$LINENO" 5
+ elif test $pkg_failed = untried; then
+      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+@@ -4388,45 +4395,87 @@
+ is in your PATH or set the PKG_CONFIG environment variable to the full
+ path to pkg-config.
+ 
+-Alternatively, you may set the environment variables jose_openssl_CFLAGS
+-and jose_openssl_LIBS to avoid the need to call pkg-config.
++Alternatively, you may set the environment variables systemd_CFLAGS
++and systemd_LIBS to avoid the need to call pkg-config.
+ See the pkg-config man page for more details.
+ 
+ To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+ See \`config.log' for more details" "$LINENO" 5; }
+ else
+-	jose_openssl_CFLAGS=$pkg_cv_jose_openssl_CFLAGS
+-	jose_openssl_LIBS=$pkg_cv_jose_openssl_LIBS
++	systemd_CFLAGS=$pkg_cv_systemd_CFLAGS
++	systemd_LIBS=$pkg_cv_systemd_LIBS
+         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ $as_echo "yes" >&6; }
+ 
+ fi
+ 
+-#PKG_CHECK_MODULES([systemd], [systemd])
+ 
+-#AC_ARG_WITH([systemdsystemunitdir],
+-#            [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],
+-#            [],
+-#            [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
+-
+-#AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
+-
+-#for ac_prog in systemd-socket-activate systemd-activate; do
+-#    AC_CHECK_PROG([SD_ACTIVATE], [$ac_prog], [$as_dir/$ac_prog], [],
+-#		  [$PATH$PATH_SEPARATOR$($PKG_CONFIG --variable=systemdutildir systemd)])
+-#    test -n "$SD_ACTIVATE" && break
+-#done
+-#
+-#test -n "$SD_ACTIVATE" || AC_MSG_ERROR([systemd-socket-activate required!])
++# Check whether --with-systemdsystemunitdir was given.
++if test "${with_systemdsystemunitdir+set}" = set; then :
++  withval=$with_systemdsystemunitdir;
++else
++  with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
++fi
++
++
++systemdsystemunitdir=$with_systemdsystemunitdir
++
++
++for ac_prog in systemd-socket-activate systemd-activate; do
++    # Extract the first word of "$ac_prog", so it can be a program name with args.
++set dummy $ac_prog; ac_word=$2
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
++$as_echo_n "checking for $ac_word... " >&6; }
++if ${ac_cv_prog_SD_ACTIVATE+:} false; then :
++  $as_echo_n "(cached) " >&6
++else
++  if test -n "$SD_ACTIVATE"; then
++  ac_cv_prog_SD_ACTIVATE="$SD_ACTIVATE" # Let the user override the test.
++else
++as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
++for as_dir in $PATH$PATH_SEPARATOR$($PKG_CONFIG --variable=systemdutildir systemd)
++do
++  IFS=$as_save_IFS
++  test -z "$as_dir" && as_dir=.
++    for ac_exec_ext in '' $ac_executable_extensions; do
++  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
++    ac_cv_prog_SD_ACTIVATE="$as_dir/$ac_prog"
++    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
++    break 2
++  fi
++done
++  done
++IFS=$as_save_IFS
++
++fi
++fi
++SD_ACTIVATE=$ac_cv_prog_SD_ACTIVATE
++if test -n "$SD_ACTIVATE"; then
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SD_ACTIVATE" >&5
++$as_echo "$SD_ACTIVATE" >&6; }
++else
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
++$as_echo "no" >&6; }
++fi
++
++
++    test -n "$SD_ACTIVATE" && break
++done
++
++test -n "$SD_ACTIVATE" || as_fn_error $? "systemd-socket-activate required!" "$LINENO" 5
++
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking systemd-socket-activate inetd flag" >&5
++$as_echo_n "checking systemd-socket-activate inetd flag... " >&6; }
++if $SD_ACTIVATE --help | grep -q inetd; then
++    SD_ACTIVATE="$SD_ACTIVATE --inetd"
++    { $as_echo "$as_me:${as_lineno-$LINENO}: result: --inetd" >&5
++$as_echo "--inetd" >&6; }
++else
++    { $as_echo "$as_me:${as_lineno-$LINENO}: result: (default)" >&5
++$as_echo "(default)" >&6; }
++fi
++
+ 
+-#AC_MSG_CHECKING([systemd-socket-activate inetd flag])
+-#if $SD_ACTIVATE --help | grep -q inetd; then
+-#    SD_ACTIVATE="$SD_ACTIVATE --inetd"
+-#    AC_MSG_RESULT([--inetd])
+-#    AC_SUBST(SD_ACTIVATE)
+-#else
+-#    AC_MSG_RESULT([(default)])
+-#fi
+ 
+ TANG_CFLAGS="\
+ -Wall \
+@@ -4451,9 +4500,6 @@
+ 
+ ac_config_files="$ac_config_files Makefile"
+ 
+-#AC_CONFIG_FILES([test-adv], [chmod +x test-adv])
+-#AC_CONFIG_FILES([test-rec], [chmod +x test-rec])
+-#AC_CONFIG_FILES([test-nagios], [chmod +x test-nagios])
+ cat >confcache <<\_ACEOF
+ # This file is a shell script that caches the results of configure
+ # tests run on this system so they can be shared between configure
+@@ -5020,7 +5066,7 @@
+ # report actual input values of CONFIG_FILES etc. instead of their
+ # values after options handling.
+ ac_log="
+-This file was extended by tang $as_me 4, which was
++This file was extended by tang $as_me 6, which was
+ generated by GNU Autoconf 2.69.  Invocation command line was
+ 
+   CONFIG_FILES    = $CONFIG_FILES
+@@ -5077,7 +5123,7 @@
+ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
+ ac_cs_config="`$as_echo "$ac_configure_args" | sed 's/^ //; s/[\\""\`\$]/\\\\&/g'`"
+ ac_cs_version="\\
+-tang config.status 4
++tang config.status 6
+ configured by $0, generated by GNU Autoconf 2.69,
+   with options \\"\$ac_cs_config\\"
+ 
+diff -ru /home/tdudlak/BP/tang/configure.ac ./configure.ac
+--- /home/tdudlak/BP/tang/configure.ac	2018-01-14 16:36:36.180348726 +0100
++++ ./configure.ac	2018-01-09 19:22:14.251299913 +0100
+@@ -27,32 +27,8 @@
+              [AC_MSG_ERROR([http-parser required!])])
+ 
+ PKG_CHECK_MODULES([jose], [jose >= 8])
+-PKG_CHECK_MODULES([systemd], [systemd])
+ 
+-AC_ARG_WITH([systemdsystemunitdir],
+-            [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],
+-            [],
+-            [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
+-
+-AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
+-
+-for ac_prog in systemd-socket-activate systemd-activate; do
+-    AC_CHECK_PROG([SD_ACTIVATE], [$ac_prog], [$as_dir/$ac_prog], [],
+-		  [$PATH$PATH_SEPARATOR$($PKG_CONFIG --variable=systemdutildir systemd)])
+-    test -n "$SD_ACTIVATE" && break
+-done
+-
+-test -n "$SD_ACTIVATE" || AC_MSG_ERROR([systemd-socket-activate required!])
+-
+-AC_MSG_CHECKING([systemd-socket-activate inetd flag])
+-if $SD_ACTIVATE --help | grep -q inetd; then
+-    SD_ACTIVATE="$SD_ACTIVATE --inetd"
+-    AC_MSG_RESULT([--inetd])
+-else
+-    AC_MSG_RESULT([(default)])
+-fi
+-
+-AC_SUBST(SD_ACTIVATE)
++#PKG_CHECK([xinetd], [xinetd])
+ 
+ TANG_CFLAGS="\
+ -Wall \
+Only in /home/tdudlak/BP/tang: .deps
+Only in .: dif
+Only in /home/tdudlak/BP/tang/doc: tang.8.md
+Only in /home/tdudlak/BP/tang/doc: tang-nagios.1.md
+Only in /home/tdudlak/BP/tang: .git
+Only in /home/tdudlak/BP/tang: .gitignore
+Only in /home/tdudlak/BP/tang: http.o
+Only in /home/tdudlak/BP/tang: Makefile
+diff -ru /home/tdudlak/BP/tang/Makefile.am ./Makefile.am
+--- /home/tdudlak/BP/tang/Makefile.am	2018-01-14 16:36:36.180348726 +0100
++++ ./Makefile.am	2018-01-09 19:22:14.250299904 +0100
+@@ -1,5 +1,3 @@
+-DISTCHECK_CONFIGURE_FLAGS = --with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
+-
+ AM_CFLAGS = @TANG_CFLAGS@ @jose_CFLAGS@
+ LDADD = @jose_LIBS@ @http_parser_LIBS@
+ 
+@@ -7,21 +5,11 @@
+ cachedir = $(localstatedir)/cache/$(PACKAGE_NAME)
+ jwkdir = $(localstatedir)/db/$(PACKAGE_NAME)
+ 
+-nodist_systemdsystemunit_DATA = \
+-    units/tangd@.service \
+-    units/tangd.socket \
+-    units/tangd-update.path \
+-    units/tangd-update.service \
+-    units/tangd-keygen.service
+-
+ dist_libexec_SCRIPTS = src/tangd-update src/tangd-keygen
+ libexec_PROGRAMS = src/tangd
+-nagios_PROGRAMS = src/tang
+-man1_MANS = doc/tang-nagios.1
+ man8_MANS = doc/tang.8
+ 
+ src_tangd_SOURCES = src/http.c src/http.h src/tangd.c
+-src_tang_SOURCES = src/nagios.c
+ 
+ %: %.in
+ 	$(AM_V_GEN)mkdir -p "`dirname "$@"`"
+@@ -32,11 +20,9 @@
+ 		$(srcdir)/$@.in > $@
+ 
+ AM_TESTS_ENVIRONMENT = SD_ACTIVATE="@SD_ACTIVATE@" PATH=$(srcdir)/src:$(builddir)/src:$(PATH)
+-TESTS = tests/adv tests/rec tests/nagios
++TESTS = tests/adv tests/rec 
+ 
+-CLEANFILES = $(nodist_systemdsystemunit_DATA)
+ EXTRA_DIST = \
+-    $(foreach unit,$(nodist_systemdsystemunit_DATA),$(unit).in) \
+     COPYING \
+     $(TESTS) \
+     $(man1_MANS) \
+diff -ru /home/tdudlak/BP/tang/Makefile.in ./Makefile.in
+--- /home/tdudlak/BP/tang/Makefile.in	2017-07-27 00:34:09.222889074 +0200
++++ ./Makefile.in	2018-01-09 19:22:14.250299904 +0100
+@@ -14,7 +14,6 @@
+ 
+ @SET_MAKE@
+ 
+-#DISTCHECK_CONFIGURE_FLAGS = --with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
+ 
+ 
+ VPATH = @srcdir@
+@@ -92,8 +91,8 @@
+ build_triplet = @build@
+ host_triplet = @host@
+ target_triplet = @target@
+-TESTS =
+-libexec_PROGRAMS = tangd$(EXEEXT)
++libexec_PROGRAMS = src/tangd$(EXEEXT)
++nagios_PROGRAMS = src/tang$(EXEEXT)
+ subdir = .
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+ am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+@@ -107,12 +106,19 @@
+ mkinstalldirs = $(install_sh) -d
+ CONFIG_CLEAN_FILES =
+ CONFIG_CLEAN_VPATH_FILES =
+-am__installdirs = "$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(libexecdir)"
+-PROGRAMS = $(libexec_PROGRAMS)
+-am_tangd_OBJECTS = http.$(OBJEXT) tangd.$(OBJEXT)
+-tangd_OBJECTS = $(am_tangd_OBJECTS)
+-tangd_LDADD = $(LDADD)
+-tangd_DEPENDENCIES =
++am__installdirs = "$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(nagiosdir)" \
++	"$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(man1dir)" \
++	"$(DESTDIR)$(man8dir)" "$(DESTDIR)$(systemdsystemunitdir)"
++PROGRAMS = $(libexec_PROGRAMS) $(nagios_PROGRAMS)
++am__dirstamp = $(am__leading_dot)dirstamp
++am_src_tang_OBJECTS = src/nagios.$(OBJEXT)
++src_tang_OBJECTS = $(am_src_tang_OBJECTS)
++src_tang_LDADD = $(LDADD)
++src_tang_DEPENDENCIES =
++am_src_tangd_OBJECTS = src/http.$(OBJEXT) src/tangd.$(OBJEXT)
++src_tangd_OBJECTS = $(am_src_tangd_OBJECTS)
++src_tangd_LDADD = $(LDADD)
++src_tangd_DEPENDENCIES =
+ am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
+ am__vpath_adj = case $$p in \
+     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
+@@ -169,13 +175,18 @@
+ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
+ am__v_CCLD_0 = @echo "  CCLD    " $@;
+ am__v_CCLD_1 = 
+-SOURCES = $(tangd_SOURCES)
+-DIST_SOURCES = $(tangd_SOURCES)
++SOURCES = $(src_tang_SOURCES) $(src_tangd_SOURCES)
++DIST_SOURCES = $(src_tang_SOURCES) $(src_tangd_SOURCES)
+ am__can_run_installinfo = \
+   case $$AM_UPDATE_INFO_DIR in \
+     n|no|NO) false;; \
+     *) (install-info --version) >/dev/null 2>&1;; \
+   esac
++man1dir = $(mandir)/man1
++man8dir = $(mandir)/man8
++NROFF = nroff
++MANS = $(man1_MANS) $(man8_MANS)
++DATA = $(nodist_systemdsystemunit_DATA)
+ am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
+ # Read a list of newline-separated strings from the standard input,
+ # and print each of them once, without duplicates.  Input order is
+@@ -355,12 +366,8 @@
+ RECHECK_LOGS = $(TEST_LOGS)
+ TEST_SUITE_LOG = test-suite.log
+ TEST_EXTENSIONS = @EXEEXT@ .test
+-am__test_logs1 = $(TESTS:=.log)
+-am__test_logs2 = $(am__test_logs1:@EXEEXT@.log=.log)
+-TEST_LOGS = $(am__test_logs2:.test.log=.log)
+-TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
+-TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
+-	$(TEST_LOG_FLAGS)
++LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
++LOG_COMPILE = $(LOG_COMPILER) $(AM_LOG_FLAGS) $(LOG_FLAGS)
+ am__set_b = \
+   case '$@' in \
+     */*) \
+@@ -371,6 +378,12 @@
+     *) \
+       b='$*';; \
+   esac
++am__test_logs1 = $(TESTS:=.log)
++am__test_logs2 = $(am__test_logs1:@EXEEXT@.log=.log)
++TEST_LOGS = $(am__test_logs2:.test.log=.log)
++TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
++TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
++	$(TEST_LOG_FLAGS)
+ am__DIST_COMMON = $(srcdir)/Makefile.in COPYING compile config.guess \
+ 	config.sub depcomp install-sh missing test-driver
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+@@ -431,6 +444,7 @@
+ PKG_CONFIG = @PKG_CONFIG@
+ PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+ PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
++SD_ACTIVATE = @SD_ACTIVATE@
+ SED = @SED@
+ SET_MAKE = @SET_MAKE@
+ SHELL = @SHELL@
+@@ -470,10 +484,8 @@
+ includedir = @includedir@
+ infodir = @infodir@
+ install_sh = @install_sh@
+-jose_openssl_CFLAGS = @jose_openssl_CFLAGS@
+-jose_openssl_LIBS = @jose_openssl_LIBS@
+-jose_zlib_CFLAGS = @jose_zlib_CFLAGS@
+-jose_zlib_LIBS = @jose_zlib_LIBS@
++jose_CFLAGS = @jose_CFLAGS@
++jose_LIBS = @jose_LIBS@
+ libdir = @libdir@
+ libexecdir = @libexecdir@
+ localedir = @localedir@
+@@ -489,6 +501,9 @@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+ sysconfdir = @sysconfdir@
++systemd_CFLAGS = @systemd_CFLAGS@
++systemd_LIBS = @systemd_LIBS@
++systemdsystemunitdir = @systemdsystemunitdir@
+ target = @target@
+ target_alias = @target_alias@
+ target_cpu = @target_cpu@
+@@ -497,20 +512,34 @@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CFLAGS = @TANG_CFLAGS@ @jose_zlib_CFLAGS@ @jose_openssl_CFLAGS@
+-LDADD = @jose_zlib_LIBS@ @jose_openssl_LIBS@ @http_parser_LIBS@
+-EXTRA_DIST = COPYING #$(TESTS) tangd@.service.in tangd.socket.in tangd-update.path.in tangd-update.service.in
+-#CLEANFILES = $(systemdsystemunit_DATA)
+-
+-#nagiosdir = $(libdir)/nagios/plugins
+-
+-#systemdsystemunit_DATA = tangd@.service tangd.socket tangd-update.path tangd-update.service
+-dist_libexec_SCRIPTS = tangd-update
+-#nagios_PROGRAMS = tang
+-tangd_SOURCES = http.c http.h tangd.c
+-#tang_SOURCES = nagios.c
+-jwkdir = $(localstatedir)/db/$(PACKAGE_NAME)
++DISTCHECK_CONFIGURE_FLAGS = --with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
++AM_CFLAGS = @TANG_CFLAGS@ @jose_CFLAGS@
++LDADD = @jose_LIBS@ @http_parser_LIBS@
++nagiosdir = $(libdir)/nagios/plugins
+ cachedir = $(localstatedir)/cache/$(PACKAGE_NAME)
++jwkdir = $(localstatedir)/db/$(PACKAGE_NAME)
++nodist_systemdsystemunit_DATA = \
++    units/tangd@.service \
++    units/tangd.socket \
++    units/tangd-update.path \
++    units/tangd-update.service \
++    units/tangd-keygen.service
++
++dist_libexec_SCRIPTS = src/tangd-update src/tangd-keygen
++man1_MANS = doc/tang-nagios.1
++man8_MANS = doc/tang.8
++src_tangd_SOURCES = src/http.c src/http.h src/tangd.c
++src_tang_SOURCES = src/nagios.c
++AM_TESTS_ENVIRONMENT = SD_ACTIVATE="@SD_ACTIVATE@" PATH=$(srcdir)/src:$(builddir)/src:$(PATH)
++TESTS = tests/adv tests/rec tests/nagios
++CLEANFILES = $(nodist_systemdsystemunit_DATA)
++EXTRA_DIST = \
++    $(foreach unit,$(nodist_systemdsystemunit_DATA),$(unit).in) \
++    COPYING \
++    $(TESTS) \
++    $(man1_MANS) \
++    $(man8_MANS)
++
+ all: all-am
+ 
+ .SUFFIXES:
+@@ -590,10 +619,66 @@
+ 
+ clean-libexecPROGRAMS:
+ 	-test -z "$(libexec_PROGRAMS)" || rm -f $(libexec_PROGRAMS)
++install-nagiosPROGRAMS: $(nagios_PROGRAMS)
++	@$(NORMAL_INSTALL)
++	@list='$(nagios_PROGRAMS)'; test -n "$(nagiosdir)" || list=; \
++	if test -n "$$list"; then \
++	  echo " $(MKDIR_P) '$(DESTDIR)$(nagiosdir)'"; \
++	  $(MKDIR_P) "$(DESTDIR)$(nagiosdir)" || exit 1; \
++	fi; \
++	for p in $$list; do echo "$$p $$p"; done | \
++	sed 's/$(EXEEXT)$$//' | \
++	while read p p1; do if test -f $$p \
++	  ; then echo "$$p"; echo "$$p"; else :; fi; \
++	done | \
++	sed -e 'p;s,.*/,,;n;h' \
++	    -e 's|.*|.|' \
++	    -e 'p;x;s,.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/' | \
++	sed 'N;N;N;s,\n, ,g' | \
++	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1 } \
++	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
++	    if ($$2 == $$4) files[d] = files[d] " " $$1; \
++	    else { print "f", $$3 "/" $$4, $$1; } } \
++	  END { for (d in files) print "f", d, files[d] }' | \
++	while read type dir files; do \
++	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
++	    test -z "$$files" || { \
++	      echo " $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(nagiosdir)$$dir'"; \
++	      $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(nagiosdir)$$dir" || exit $$?; \
++	    } \
++	; done
+ 
+-tangd$(EXEEXT): $(tangd_OBJECTS) $(tangd_DEPENDENCIES) $(EXTRA_tangd_DEPENDENCIES) 
+-	@rm -f tangd$(EXEEXT)
+-	$(AM_V_CCLD)$(LINK) $(tangd_OBJECTS) $(tangd_LDADD) $(LIBS)
++uninstall-nagiosPROGRAMS:
++	@$(NORMAL_UNINSTALL)
++	@list='$(nagios_PROGRAMS)'; test -n "$(nagiosdir)" || list=; \
++	files=`for p in $$list; do echo "$$p"; done | \
++	  sed -e 'h;s,^.*/,,;s/$(EXEEXT)$$//;$(transform)' \
++	      -e 's/$$/$(EXEEXT)/' \
++	`; \
++	test -n "$$list" || exit 0; \
++	echo " ( cd '$(DESTDIR)$(nagiosdir)' && rm -f" $$files ")"; \
++	cd "$(DESTDIR)$(nagiosdir)" && rm -f $$files
++
++clean-nagiosPROGRAMS:
++	-test -z "$(nagios_PROGRAMS)" || rm -f $(nagios_PROGRAMS)
++src/$(am__dirstamp):
++	@$(MKDIR_P) src
++	@: > src/$(am__dirstamp)
++src/$(DEPDIR)/$(am__dirstamp):
++	@$(MKDIR_P) src/$(DEPDIR)
++	@: > src/$(DEPDIR)/$(am__dirstamp)
++src/nagios.$(OBJEXT): src/$(am__dirstamp) \
++	src/$(DEPDIR)/$(am__dirstamp)
++
++src/tang$(EXEEXT): $(src_tang_OBJECTS) $(src_tang_DEPENDENCIES) $(EXTRA_src_tang_DEPENDENCIES) src/$(am__dirstamp)
++	@rm -f src/tang$(EXEEXT)
++	$(AM_V_CCLD)$(LINK) $(src_tang_OBJECTS) $(src_tang_LDADD) $(LIBS)
++src/http.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
++src/tangd.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
++
++src/tangd$(EXEEXT): $(src_tangd_OBJECTS) $(src_tangd_DEPENDENCIES) $(EXTRA_src_tangd_DEPENDENCIES) src/$(am__dirstamp)
++	@rm -f src/tangd$(EXEEXT)
++	$(AM_V_CCLD)$(LINK) $(src_tangd_OBJECTS) $(src_tangd_LDADD) $(LIBS)
+ install-dist_libexecSCRIPTS: $(dist_libexec_SCRIPTS)
+ 	@$(NORMAL_INSTALL)
+ 	@list='$(dist_libexec_SCRIPTS)'; test -n "$(libexecdir)" || list=; \
+@@ -632,12 +717,14 @@
+ 
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)
++	-rm -f src/*.$(OBJEXT)
+ 
+ distclean-compile:
+ 	-rm -f *.tab.c
+ 
+-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/http.Po@am__quote@
+-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tangd.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/http.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/nagios.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/tangd.Po@am__quote@
+ 
+ .c.o:
+ @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@@ -654,6 +741,109 @@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+ @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
++install-man1: $(man1_MANS)
++	@$(NORMAL_INSTALL)
++	@list1='$(man1_MANS)'; \
++	list2=''; \
++	test -n "$(man1dir)" \
++	  && test -n "`echo $$list1$$list2`" \
++	  || exit 0; \
++	echo " $(MKDIR_P) '$(DESTDIR)$(man1dir)'"; \
++	$(MKDIR_P) "$(DESTDIR)$(man1dir)" || exit 1; \
++	{ for i in $$list1; do echo "$$i"; done;  \
++	if test -n "$$list2"; then \
++	  for i in $$list2; do echo "$$i"; done \
++	    | sed -n '/\.1[a-z]*$$/p'; \
++	fi; \
++	} | while read p; do \
++	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
++	  echo "$$d$$p"; echo "$$p"; \
++	done | \
++	sed -e 'n;s,.*/,,;p;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
++	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,' | \
++	sed 'N;N;s,\n, ,g' | { \
++	list=; while read file base inst; do \
++	  if test "$$base" = "$$inst"; then list="$$list $$file"; else \
++	    echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man1dir)/$$inst'"; \
++	    $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man1dir)/$$inst" || exit $$?; \
++	  fi; \
++	done; \
++	for i in $$list; do echo "$$i"; done | $(am__base_list) | \
++	while read files; do \
++	  test -z "$$files" || { \
++	    echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(man1dir)'"; \
++	    $(INSTALL_DATA) $$files "$(DESTDIR)$(man1dir)" || exit $$?; }; \
++	done; }
++
++uninstall-man1:
++	@$(NORMAL_UNINSTALL)
++	@list='$(man1_MANS)'; test -n "$(man1dir)" || exit 0; \
++	files=`{ for i in $$list; do echo "$$i"; done; \
++	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
++	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
++	dir='$(DESTDIR)$(man1dir)'; $(am__uninstall_files_from_dir)
++install-man8: $(man8_MANS)
++	@$(NORMAL_INSTALL)
++	@list1='$(man8_MANS)'; \
++	list2=''; \
++	test -n "$(man8dir)" \
++	  && test -n "`echo $$list1$$list2`" \
++	  || exit 0; \
++	echo " $(MKDIR_P) '$(DESTDIR)$(man8dir)'"; \
++	$(MKDIR_P) "$(DESTDIR)$(man8dir)" || exit 1; \
++	{ for i in $$list1; do echo "$$i"; done;  \
++	if test -n "$$list2"; then \
++	  for i in $$list2; do echo "$$i"; done \
++	    | sed -n '/\.8[a-z]*$$/p'; \
++	fi; \
++	} | while read p; do \
++	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
++	  echo "$$d$$p"; echo "$$p"; \
++	done | \
++	sed -e 'n;s,.*/,,;p;h;s,.*\.,,;s,^[^8][0-9a-z]*$$,8,;x' \
++	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,' | \
++	sed 'N;N;s,\n, ,g' | { \
++	list=; while read file base inst; do \
++	  if test "$$base" = "$$inst"; then list="$$list $$file"; else \
++	    echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man8dir)/$$inst'"; \
++	    $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man8dir)/$$inst" || exit $$?; \
++	  fi; \
++	done; \
++	for i in $$list; do echo "$$i"; done | $(am__base_list) | \
++	while read files; do \
++	  test -z "$$files" || { \
++	    echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(man8dir)'"; \
++	    $(INSTALL_DATA) $$files "$(DESTDIR)$(man8dir)" || exit $$?; }; \
++	done; }
++
++uninstall-man8:
++	@$(NORMAL_UNINSTALL)
++	@list='$(man8_MANS)'; test -n "$(man8dir)" || exit 0; \
++	files=`{ for i in $$list; do echo "$$i"; done; \
++	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^8][0-9a-z]*$$,8,;x' \
++	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
++	dir='$(DESTDIR)$(man8dir)'; $(am__uninstall_files_from_dir)
++install-nodist_systemdsystemunitDATA: $(nodist_systemdsystemunit_DATA)
++	@$(NORMAL_INSTALL)
++	@list='$(nodist_systemdsystemunit_DATA)'; test -n "$(systemdsystemunitdir)" || list=; \
++	if test -n "$$list"; then \
++	  echo " $(MKDIR_P) '$(DESTDIR)$(systemdsystemunitdir)'"; \
++	  $(MKDIR_P) "$(DESTDIR)$(systemdsystemunitdir)" || exit 1; \
++	fi; \
++	for p in $$list; do \
++	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
++	  echo "$$d$$p"; \
++	done | $(am__base_list) | \
++	while read files; do \
++	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(systemdsystemunitdir)'"; \
++	  $(INSTALL_DATA) $$files "$(DESTDIR)$(systemdsystemunitdir)" || exit $$?; \
++	done
++
++uninstall-nodist_systemdsystemunitDATA:
++	@$(NORMAL_UNINSTALL)
++	@list='$(nodist_systemdsystemunit_DATA)'; test -n "$(systemdsystemunitdir)" || list=; \
++	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
++	dir='$(DESTDIR)$(systemdsystemunitdir)'; $(am__uninstall_files_from_dir)
+ 
+ ID: $(am__tagged_files)
+ 	$(am__define_uniq_tagged_files); mkid -fID $$unique
+@@ -855,6 +1045,27 @@
+ 	        am__force_recheck=am--force-recheck \
+ 	        TEST_LOGS="$$log_list"; \
+ 	exit $$?
++tests/adv.log: tests/adv
++	@p='tests/adv'; \
++	b='tests/adv'; \
++	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
++	--log-file $$b.log --trs-file $$b.trs \
++	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
++	"$$tst" $(AM_TESTS_FD_REDIRECT)
++tests/rec.log: tests/rec
++	@p='tests/rec'; \
++	b='tests/rec'; \
++	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
++	--log-file $$b.log --trs-file $$b.trs \
++	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
++	"$$tst" $(AM_TESTS_FD_REDIRECT)
++tests/nagios.log: tests/nagios
++	@p='tests/nagios'; \
++	b='tests/nagios'; \
++	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
++	--log-file $$b.log --trs-file $$b.trs \
++	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
++	"$$tst" $(AM_TESTS_FD_REDIRECT)
+ .test.log:
+ 	@p='$<'; \
+ 	$(am__set_b); \
+@@ -1035,9 +1246,9 @@
+ check-am: all-am
+ 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
+ check: check-am
+-all-am: Makefile $(PROGRAMS) $(SCRIPTS)
++all-am: Makefile $(PROGRAMS) $(SCRIPTS) $(MANS) $(DATA)
+ installdirs:
+-	for dir in "$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(libexecdir)"; do \
++	for dir in "$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(nagiosdir)" "$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man8dir)" "$(DESTDIR)$(systemdsystemunitdir)"; do \
+ 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
+ 	done
+ install: install-am
+@@ -1065,21 +1276,25 @@
+ 	-test -z "$(TEST_SUITE_LOG)" || rm -f $(TEST_SUITE_LOG)
+ 
+ clean-generic:
++	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
+ 
+ distclean-generic:
+ 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
+ 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
++	-rm -f src/$(DEPDIR)/$(am__dirstamp)
++	-rm -f src/$(am__dirstamp)
+ 
+ maintainer-clean-generic:
+ 	@echo "This command is intended for maintainers to use"
+ 	@echo "it deletes files that may require special tools to rebuild."
+ clean: clean-am
+ 
+-clean-am: clean-generic clean-libexecPROGRAMS mostlyclean-am
++clean-am: clean-generic clean-libexecPROGRAMS clean-nagiosPROGRAMS \
++	mostlyclean-am
+ 
+ distclean: distclean-am
+ 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
+-	-rm -rf ./$(DEPDIR)
++	-rm -rf src/$(DEPDIR)
+ 	-rm -f Makefile
+ distclean-am: clean-am distclean-compile distclean-generic \
+ 	distclean-tags
+@@ -1096,7 +1311,8 @@
+ 
+ info-am:
+ 
+-install-data-am:
++install-data-am: install-man install-nagiosPROGRAMS \
++	install-nodist_systemdsystemunitDATA
+ 
+ install-dvi: install-dvi-am
+ 
+@@ -1112,7 +1328,7 @@
+ 
+ install-info-am:
+ 
+-install-man:
++install-man: install-man1 install-man8
+ 
+ install-pdf: install-pdf-am
+ 
+@@ -1127,7 +1343,7 @@
+ maintainer-clean: maintainer-clean-am
+ 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
+ 	-rm -rf $(top_srcdir)/autom4te.cache
+-	-rm -rf ./$(DEPDIR)
++	-rm -rf src/$(DEPDIR)
+ 	-rm -f Makefile
+ maintainer-clean-am: distclean-am maintainer-clean-generic
+ 
+@@ -1143,32 +1359,42 @@
+ 
+ ps-am:
+ 
+-uninstall-am: uninstall-dist_libexecSCRIPTS uninstall-libexecPROGRAMS
++uninstall-am: uninstall-dist_libexecSCRIPTS uninstall-libexecPROGRAMS \
++	uninstall-man uninstall-nagiosPROGRAMS \
++	uninstall-nodist_systemdsystemunitDATA
++
++uninstall-man: uninstall-man1 uninstall-man8
+ 
+ .MAKE: check-am install-am install-strip
+ 
+ .PHONY: CTAGS GTAGS TAGS all all-am am--refresh check check-TESTS \
+ 	check-am clean clean-cscope clean-generic \
+-	clean-libexecPROGRAMS cscope cscopelist-am ctags ctags-am dist \
+-	dist-all dist-bzip2 dist-gzip dist-lzip dist-shar dist-tarZ \
+-	dist-xz dist-zip distcheck distclean distclean-compile \
+-	distclean-generic distclean-tags distcleancheck distdir \
+-	distuninstallcheck dvi dvi-am html html-am info info-am \
+-	install install-am install-data install-data-am \
+-	install-dist_libexecSCRIPTS install-dvi install-dvi-am \
+-	install-exec install-exec-am install-html install-html-am \
+-	install-info install-info-am install-libexecPROGRAMS \
+-	install-man install-pdf install-pdf-am install-ps \
+-	install-ps-am install-strip installcheck installcheck-am \
+-	installdirs maintainer-clean maintainer-clean-generic \
+-	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
+-	ps ps-am recheck tags tags-am uninstall uninstall-am \
+-	uninstall-dist_libexecSCRIPTS uninstall-libexecPROGRAMS
++	clean-libexecPROGRAMS clean-nagiosPROGRAMS cscope \
++	cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
++	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
++	distcheck distclean distclean-compile distclean-generic \
++	distclean-tags distcleancheck distdir distuninstallcheck dvi \
++	dvi-am html html-am info info-am install install-am \
++	install-data install-data-am install-dist_libexecSCRIPTS \
++	install-dvi install-dvi-am install-exec install-exec-am \
++	install-html install-html-am install-info install-info-am \
++	install-libexecPROGRAMS install-man install-man1 install-man8 \
++	install-nagiosPROGRAMS install-nodist_systemdsystemunitDATA \
++	install-pdf install-pdf-am install-ps install-ps-am \
++	install-strip installcheck installcheck-am installdirs \
++	maintainer-clean maintainer-clean-generic mostlyclean \
++	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
++	recheck tags tags-am uninstall uninstall-am \
++	uninstall-dist_libexecSCRIPTS uninstall-libexecPROGRAMS \
++	uninstall-man uninstall-man1 uninstall-man8 \
++	uninstall-nagiosPROGRAMS \
++	uninstall-nodist_systemdsystemunitDATA
+ 
+ .PRECIOUS: Makefile
+ 
+ 
+ %: %.in
++	$(AM_V_GEN)mkdir -p "`dirname "$@"`"
+ 	$(AM_V_GEN)$(SED) \
+ 		-e 's,@libexecdir\@,$(libexecdir),g' \
+ 		-e 's,@jwkdir\@,$(jwkdir),g' \
+Only in /home/tdudlak/BP/tang: README.md
+diff -ru /home/tdudlak/BP/tang/src/tangd-update ./src/tangd-update
+--- /home/tdudlak/BP/tang/src/tangd-update	2018-01-14 17:16:28.956381713 +0100
++++ ./src/tangd-update	2018-01-09 21:44:35.048363870 +0100
+@@ -33,8 +33,8 @@
+ 
+ [ ! -d "$2" ] && mkdir -p -m 0700 "$2"
+ 
+-src=`realpath "$1"`
+-dst=`realpath "$2"`
++src=`readlink -f "$1"`
++dst=`readlink -f "$2"`
+ 
+ payl=()
+ sign=()
+Only in /home/tdudlak/BP/tang: tangd.o
+Only in .: tangdw
+Only in .: tangdx
+Only in /home/tdudlak/BP/tang: .travis.test
+Only in /home/tdudlak/BP/tang: .travis.yml
