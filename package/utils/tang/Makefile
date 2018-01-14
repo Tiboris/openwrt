@@ -11,9 +11,9 @@ PKG_NAME:=tang
 PKG_VERSION:=6
 PKG_RELEASE:=1
 
-#PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-#PKG_SOURCE_URL:=https://github.com/latchset/$(PKG_NAME)/releases/download/v$(PKG_VERSION)/
-#PKG_HASH:=1df78b48a52d2ca05656555cfe52bd4427c884f5a54a2c5e37a7b39da9e155e3
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
+PKG_SOURCE_URL:=https://github.com/latchset/$(PKG_NAME)/releases/download/v$(PKG_VERSION)/
+PKG_HASH:=1df78b48a52d2ca05656555cfe52bd4427c884f5a54a2c5e37a7b39da9e155e3
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
@@ -33,10 +33,6 @@ CFLAGS += -fhonour-copts
 TARGET_CFLAGS += $(FPIC) -std=gnu99 -D_GNU_SOURCE
 TARGET_LDFLAGS += -Wl,-rpath-link=$(1)/usr/lib
 
-define Build/Prepare
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
-endef
-
 define Package/tang/description
 	Tang is a small daemon for binding data to the presence of a third party.
 endef
@@ -50,16 +46,21 @@ define Package/tang/install
 	$(INSTALL_DIR)	$(1)/etc/xinetd.d/
 	$(INSTALL_BIN)	$(PKG_INSTALL_DIR)/usr/lib/$(PKG_NAME)d		$(1)/usr/libexec/
 	$(INSTALL_BIN)	$(PKG_INSTALL_DIR)/usr/lib/$(PKG_NAME)d-*	$(1)/usr/libexec/
-	$(INSTALL_BIN)	$(PKG_BUILD_DIR)/tangdw				$(1)/usr/libexec/
-	$(CP)		$(PKG_BUILD_DIR)/tangdx				$(1)/etc/xinetd.d/
+	$(INSTALL_BIN)	./files/tangdw					$(1)/usr/libexec/
+	$(CP)		./files/tangdx					$(1)/etc/xinetd.d/
 endef
 
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 if [ -z "$${IPKG_INSTROOT}" ]; then
-	mkdir -p /usr/share/tang/{db,cache}	
-	/usr/libexec/tangd-keygen /usr/share/tang/db/
-	/usr/libexec/tangd-update /usr/share/tang/db/ /usr/share/tang/cache/
+	mkdir -p /usr/share/tang/db
+	mkdir -p /usr/share/tang/cache
+	if [ ! "$(ls -A /usr/share/tang/db)" ]; then # if db is empty generate new keys
+		/usr/libexec/tangd-keygen /usr/share/tang/db/
+	fi
+	if [ ! "$(ls -A /usr/share/tang/cache)" ]; then # if cache is empty update cache
+                /usr/libexec/tangd-update /usr/share/tang/db/ /usr/share/tang/cache/
+	fi
 	(cat /etc/services | grep -E "tangd.*8888\/tcp") || echo -e "tangd\t\t8888/tcp" >> /etc/services
 fi
 endef

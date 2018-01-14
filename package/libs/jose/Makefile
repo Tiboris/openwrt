@@ -50,15 +50,15 @@ define Build/InstallDev
 	$(INSTALL_DIR)	$(1)/usr/lib/pkgconfig
 	$(CP)	$(PKG_INSTALL_DIR)/usr/lib/lib$(PKG_NAME).so*	$(1)/usr/lib
 	$(CP)	$(PKG_INSTALL_DIR)/usr/include/$(PKG_NAME)/*.h	$(1)/usr/include/$(PKG_NAME)
-	$(CP)	$(PKG_BUILD_DIR)/*.pc							$(1)/usr/lib/pkgconfig
+	$(CP)	$(PKG_BUILD_DIR)/*.pc				$(1)/usr/lib/pkgconfig
 endef
 
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR)	$(1)/usr/lib
 	$(INSTALL_DIR)	$(1)/usr/bin
-	$(CP)			$(PKG_INSTALL_DIR)/usr/lib/lib$(PKG_NAME).so*	$(1)/usr/lib/
-	$(INSTALL_BIN)	$(PKG_INSTALL_DIR)/usr/bin/$(PKG_NAME)			$(1)/usr/bin/
+	$(CP)		$(PKG_INSTALL_DIR)/usr/lib/lib$(PKG_NAME).so*	$(1)/usr/lib/
+	$(INSTALL_BIN)	$(PKG_INSTALL_DIR)/usr/bin/$(PKG_NAME)		$(1)/usr/bin/
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
