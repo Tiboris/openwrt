@@ -10,4 +10,3 @@ service tangd
     log_on_failure  += USERID
     disable         = no
 }
-# should be renamed to tangd

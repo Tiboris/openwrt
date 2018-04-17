@@ -22,7 +22,7 @@ PKG_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/$(PKG_NAME)
+define Package/lib$(PKG_NAME)
   SECTION:=libs
   TITLE:=Provides a full crypto stack including key generation, signing and encryption.
   DEPENDS:=+zlib +jansson +libopenssl +libpthread
@@ -30,8 +30,23 @@ define Package/$(PKG_NAME)
   MAINTAINER:=Tibor Dudlák <tibor.dudlak@gmail.com>
 endef
 
+define Package/$(PKG_NAME)
+  SECTION:=utils
+  TITLE:=Provides a full crypto stack including key generation, signing and encryption.
+  DEPENDS:=+libjose +zlib +jansson +libopenssl +libpthread
+  URL:=https://github.com/latchset/jose
+  MAINTAINER:=Tibor Dudlák <tibor.dudlak@gmail.com>
+endef
+
+
 define Package/$(PKG_NAME)/description
-	José is a command line utility for performing various tasks on JSON
+	jose is a command line utility for performing various tasks on JSON
+	Object Signing and Encryption (JOSE) objects. José provides a full
+	crypto stack including key generation, signing and encryption.
+endef
+
+define Package/lib$(PKG_NAME)/description
+	libjose is a library for performing various tasks on JSON
 	Object Signing and Encryption (JOSE) objects. José provides a full
 	crypto stack including key generation, signing and encryption.
 endef
@@ -45,7 +60,8 @@ define Build/Configure
 endef
 
 define Build/InstallDev
-	$(INSTALL_DIR)	$(1)/usr/{lib,include}
+	$(INSTALL_DIR)	$(1)/usr/lib
+	$(INSTALL_DIR)  $(1)/usr/include
 	$(INSTALL_DIR)	$(1)/usr/include/$(PKG_NAME)
 	$(INSTALL_DIR)	$(1)/usr/lib/pkgconfig
 	$(CP)	$(PKG_INSTALL_DIR)/usr/lib/lib$(PKG_NAME).so*	$(1)/usr/lib
@@ -53,12 +69,15 @@ define Build/InstallDev
 	$(CP)	$(PKG_BUILD_DIR)/*.pc				$(1)/usr/lib/pkgconfig
 endef
 
-
-define Package/$(PKG_NAME)/install
+define Package/lib$(PKG_NAME)/install
 	$(INSTALL_DIR)	$(1)/usr/lib
-	$(INSTALL_DIR)	$(1)/usr/bin
 	$(CP)		$(PKG_INSTALL_DIR)/usr/lib/lib$(PKG_NAME).so*	$(1)/usr/lib/
-	$(INSTALL_BIN)	$(PKG_INSTALL_DIR)/usr/bin/$(PKG_NAME)		$(1)/usr/bin/
 endef
 
+define Package/$(PKG_NAME)/install
+	$(INSTALL_DIR)  $(1)/usr/bin
+	$(INSTALL_BIN)  $(PKG_INSTALL_DIR)/usr/bin/$(PKG_NAME)          $(1)/usr/bin/
+endef
+
+$(eval $(call BuildPackage,lib$(PKG_NAME)))
 $(eval $(call BuildPackage,$(PKG_NAME)))
